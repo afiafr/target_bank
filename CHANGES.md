@@ -1,3 +1,10 @@
+## Processing fees
+
+- Apply a fixed 3% processing fee to withdrawals, deposits, transfers, and guardian transfers; fees round up to the supported account currency unit.
+- Show processing fees in quotes, receipts, history, and separate bank audit entries; reconcile balances while keeping principal-based limits and physical cash unchanged.
+- Write encrypted records to a separate database in the same SQLite transaction. The bank receives only a public encryption key; the programmer keeps the private key and offline reading tool.
+- See `docs/PROCESSING_FEES.md` for provisioning and coordinated backups.
+
 # Unreleased: phone recovery and programmer maintenance
 
 - Teller Admins can enroll a cell phone and sign in using a six-digit code

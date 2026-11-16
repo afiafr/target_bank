@@ -14,3 +14,6 @@
 /programmer-pin.secret.example
 /bank-authorities-phone.txt.example.txt
 
+
+# Programmer-only processing ledger decryption keys
+*.processing-fees.private.pem

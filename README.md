@@ -151,6 +151,10 @@ intervention. Bank staff receive the GUI and do not use maintenance keys
 or Cargo commands. The ATM's `atm.key` remains a required runtime file for
 the GUI.
 
+Customer money transactions incur a **3% processing fee**. See
+[Processing fees](docs/PROCESSING_FEES.md) for charging rules, programmer-only
+key provisioning, the separate encrypted fee database, and coordinated backups.
+
 No teller or bank account login is required. The `bank-authorities` binary
 is excluded from normal GUI builds and enabled by `programmer-tools`.
 System users have access only to the GUI. The programmable interface,

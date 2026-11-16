@@ -770,3 +770,8 @@ person can't read or scroll back to the last one.
 | "Not allowed: this is a demo database with published passwords; it can't run as a real bank." | `atm.db` is a copy of practice data, whose passwords are public | Use the real bank's files. Practice data runs only with `--demo` |
 | "Not allowed: this is a real bank's database, not demo data." | Practice mode found a real bank's data in `atm-demo.db` | Put the real data back where it belongs; delete `atm-demo.*` for fresh practice data |
 | "System clock is behind the audit log. Fix the clock before using this ATM." | The computer's clock is earlier than the newest log entry | Fix the clock, then start again |
+
+
+## Processing fees
+
+Withdrawals, deposits, transfers, and guardian transfers incur a **3% processing fee**, rounded up to a supported currency unit. Withdrawals and outgoing transfers debit principal plus the fee; deposits credit principal less the fee. Transfer recipients receive the full principal. Existing ATM/exchange fees still apply. Receipts and history show processing fees separately. Read [Processing fees](PROCESSING_FEES.md) for programmer provisioning and database backup requirements. Examples elsewhere in this guide show principal; actual balances also reflect processing fees.

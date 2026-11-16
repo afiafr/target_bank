@@ -1,5 +1,13 @@
 # Threat model: Bank of CCNY ATM
 
+## Processing fee extension
+
+Every successful withdrawal, deposit, transfer and guardian transfer pays a fixed 3% processing fee, rounded up to a supported account currency unit. A separate signed bank audit entry records the debit and original transaction reference; reconciliation includes it without changing physical cash accounting. Previews are free, and failures roll back all money and fee changes.
+
+The separate `atm.processing-fees.db` stores RSA-OAEP-SHA256 encrypted records. Only the public key is installed on the ATM; the programmer keeps the private key off the bank machine. Bank staff can see charges in the bank audit and access ciphertext as application owners, but cannot decrypt the separate payloads with `atm.key`. The private key, rather than a bank staff role, authorizes offline decryption. Compromise of that private key exposes the encrypted records. The ledger does not conceal the fee amounts already disclosed to customers and the bank.
+
+The sealed main database pins a hash covering the private ledger schema, installed public key, and encrypted rows. Fee record references must match bank processing-fee entries. Both databases use one attached SQLite transaction with DELETE rollback journals and FULL synchronization; backups must capture both databases and the main anchor consistently. See [Processing fees](PROCESSING_FEES.md) for provisioning and custody. SQLite documents the multi-file atomicity conditions in [ATTACH DATABASE](https://www.sqlite.org/lang_attach.html).
+
 ## Cell phone recovery extension
 
 Teller Admins may sign in using a registered phone number and a code delivered

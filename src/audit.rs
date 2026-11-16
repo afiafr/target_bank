@@ -42,6 +42,7 @@ pub enum Action {
     Deposit,
     Withdrawal,
     Transfer,
+    ProcessingFee,
     LimitChanged,
     ControlsChanged,
     AccountFrozen,
@@ -85,6 +86,7 @@ impl Action {
             Action::Deposit => "deposit",
             Action::Withdrawal => "withdrawal",
             Action::Transfer => "transfer",
+            Action::ProcessingFee => "processing_fee",
             Action::LimitChanged => "limit_changed",
             Action::ControlsChanged => "controls_changed",
             Action::AccountFrozen => "account_frozen",
@@ -288,7 +290,7 @@ fn reconcile_balances(conn: &Connection) -> Result<i64> {
                 COALESCE((SELECT SUM(CASE
                     WHEN l.account_id = a.id AND l.action IN ('account_opened', 'deposit')
                         THEN l.amount_cents
-                    WHEN l.account_id = a.id AND l.action IN ('withdrawal', 'transfer')
+                    WHEN l.account_id = a.id AND l.action IN ('withdrawal', 'transfer', 'processing_fee')
                         THEN -l.amount_cents
                     WHEN l.counterparty_id = a.id AND l.action = 'transfer'
                         THEN l.amount_cents
@@ -470,7 +472,7 @@ pub(crate) fn for_account(
          LEFT JOIN accounts a ON a.id = l.account_id
          LEFT JOIN accounts c ON c.id = l.counterparty_id
          WHERE (l.account_id = ?1 OR l.counterparty_id = ?1)
-           AND (?2 = 0 OR l.action IN ('deposit', 'withdrawal', 'transfer'))
+           AND (?2 = 0 OR l.action IN ('deposit', 'withdrawal', 'transfer', 'processing_fee'))
          ORDER BY l.seq DESC LIMIT ?3 OFFSET ?4",
     )?;
     let mut rows = stmt.query(params![account_id, transactions_only, page_size, offset])?;

@@ -82,6 +82,7 @@ pub mod fx;
 pub mod input;
 pub mod keys;
 pub mod money;
+pub mod processing;
 pub mod rate_feed;
 pub mod review;
 mod seal;
@@ -181,6 +182,7 @@ impl Atm {
             }
             anchor.advance(counter, &mac)?; // a crash right after a commit leaves it one behind
         }
+        processing::attach(&conn, Some(db_path))?;
         audit::check_clock(&conn)?; // refuse to run if the clock went backwards
         auth::warm_up(); // the first failed login then takes as long as any other
         let mut atm = Atm {
@@ -191,6 +193,7 @@ impl Atm {
             anchor_behind: Cell::new(false),
             unknown_cards: HashMap::new(),
         };
+        processing::install_if_available(&mut atm, db_path)?;
         auth::recovery::migrate_staff(&mut atm)?;
         auth::recovery::refresh_authorities_configuration(&mut atm)?;
         Ok(atm)
@@ -207,6 +210,7 @@ impl Atm {
     pub(crate) fn begin(&mut self) -> Result<Tx<'_>> {
         let tx = self.conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let counter = seal::check(&tx)?;
+        processing::check(&tx)?;
         if counter < self.seen.get() {
             return Err(AtmError::RolledBack);
         }
@@ -225,6 +229,7 @@ impl Atm {
     pub(crate) fn read(&self) -> Result<Transaction<'_>> {
         let tx = self.conn.unchecked_transaction()?;
         let counter = seal::check(&tx)?;
+        processing::check(&tx)?;
         if counter < self.seen.get() {
             return Err(AtmError::RolledBack);
         }
@@ -238,6 +243,7 @@ impl Atm {
     pub(crate) fn in_memory() -> Result<Atm> {
         let conn = db::open_in_memory()?;
         let counter = seal::check(&conn)?;
+        processing::attach(&conn, None)?;
         Ok(Atm {
             conn,
             id: new_id()?,
@@ -291,6 +297,7 @@ impl Tx<'_> {
     /// Re-seal with the next counter, commit, then move the anchor forward.
     pub(crate) fn commit(self) -> Result<()> {
         let next = self.counter + 1;
+        processing::seal(&self.tx)?;
         let mac = seal::write(&self.tx, next)?;
         self.tx.commit()?;
         self.seen.set(next);

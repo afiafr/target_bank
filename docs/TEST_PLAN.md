@@ -364,3 +364,10 @@ found three more gaps, two of the new tests grew:
 while a customer waits; the reason stays on screen after the wipe, S35).
 The guardian move into a frozen account above is S33. The fifth compile-fail
 check is new: a front end can't make up a rate feed.
+
+
+## Processing fee verification
+
+Verify 3% processing fees on deposits, withdrawals, bank transfers, and both guardian transfer directions, including rounding and foreign currency units. Confirm the sender pays and recipients get full principal; compare quotes, receipts, history, daily principal limits, and balance/cash reconciliation. Reject withdrawals/transfers when balance covers principal but not the fee. Failed or held attempts must not create fee entries.
+
+Provision the public key before money transactions; keep the private key off the bank machine. Decrypt the separate ledger with the programmer tool and verify amounts/references. A wrong key must fail. Missing public keys or failed fee writes must roll back balances, cash and both ledgers. Edit, delete or restore an old fee database and confirm operations stop. Back up and restore both databases and the matching anchor together. Older transaction examples show principal; include processing fees in expected balances.

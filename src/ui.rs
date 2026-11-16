@@ -334,6 +334,9 @@ fn transfer(atm: &mut Atm, s: &CustomerSession) -> Result<()> {
     let currency = customer::account_info(atm, s)?.currency;
     let amount =
         currency.parse_amount(&input::read_line(&format!("Amount to transfer ({}): ", currency.code()))?)?;
+    for row in atm::processing::transfer_summary(currency, amount)? {
+        println!("  {}: {}", row.label, row.amount);
+    }
     let shown = currency.format(amount);
     if !input::confirm(&format!("Send {shown} to account {} ({initials})? (y/n) ", mask(&to)))? {
         println!("\n  Cancelled.");
@@ -468,8 +471,9 @@ fn family_move(atm: &mut Atm, s: &CustomerSession, child: &str, direction: Direc
     let amount = currency.parse_amount(&input::read_line(&format!("Amount ({}): ", currency.code()))?)?;
     let m = family::move_money(atm, s, child, direction, amount)?;
     println!(
-        "\n  Moved {}. Ref #{}. Your balance: {}. Child's balance: {}.",
+        "\n  Moved {}. Processing fee: {} (3%, paid by the source account). Ref #{}. Your balance: {}. Child's balance: {}.",
         m.currency.format(m.amount),
+        m.currency.format(m.processing_fee),
         m.reference,
         m.currency.format(m.your_balance),
         m.currency.format(m.child_balance)
