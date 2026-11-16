@@ -27,6 +27,11 @@ name = "bank-processing-fees"
 path = "src/bin/bank-processing-fees.rs"
 required-features = ["programmer-tools"]
 
+[[bin]]
+name = "bank-atm-location"
+path = "src/bin/bank-atm-location.rs"
+required-features = ["programmer-tools"]
+
 # One build folder and one Cargo.lock for the core, the CLI and the GUI.
 # `cargo build` here builds the core + CLI only; the GUI is `-p atm-gui`.
 [workspace]

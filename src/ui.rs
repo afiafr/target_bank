@@ -255,7 +255,8 @@ fn print_receipt(r: &Receipt) {
 fn withdraw(atm: &mut Atm, s: &CustomerSession) -> Result<()> {
     let amount = Cents::parse(&input::read_line("Amount to withdraw (US dollars): $")?)?;
     let charge = customer::check_withdrawal(atm, s, amount)?;
-    // Fees or a conversion: show every part before the customer commits.
+    println!("  Withdrawal amount: {amount}");
+    // Requested cash stays separate from the account impact of fees or conversion.
     if !charge.fees.is_empty() || charge.rate.is_some() {
         println!();
         for line in charge.breakdown(false) {
@@ -311,7 +312,8 @@ fn deposit(atm: &mut Atm, s: &CustomerSession) -> Result<()> {
             .ok_or(AtmError::InvalidInput("too many bills"))?;
         bills.push((bill, count));
     }
-    // Account in another currency: show the rate and exchange fee first.
+    println!("  Deposit amount: {total}");
+    // The cash amount is separate from the net account credit.
     let credit = customer::preview_deposit(atm, s, total)?;
     if credit.rate.is_some() {
         println!();
@@ -338,7 +340,10 @@ fn transfer(atm: &mut Atm, s: &CustomerSession) -> Result<()> {
         println!("  {}: {}", row.label, row.amount);
     }
     let shown = currency.format(amount);
-    if !input::confirm(&format!("Send {shown} to account {} ({initials})? (y/n) ", mask(&to)))? {
+    if !input::confirm(&format!(
+        "Confirm transfer amount {shown} to account {} ({initials})? (y/n) ",
+        mask(&to)
+    ))? {
         println!("\n  Cancelled.");
         return Ok(());
     }
@@ -935,7 +940,9 @@ fn freeze(atm: &mut Atm, s: &AdminSession) -> Result<()> {
 
 fn handler_flow(atm: &mut Atm) -> Result<()> {
     if service::out_of_service(atm)? {
-        println!("  The ATM is out of service. Only a Teller Admin can sign in until it is resumed.");
+        println!(
+            "  The ATM is out of service. Customer and Cash Handler access is paused until a Teller Admin resumes service."
+        );
         return Ok(());
     }
     let username = input::read_line("Cash Handler username: ")?;

@@ -15,6 +15,7 @@ fn programmer_tool_decrypts_disk_records_and_bank_rejects_missing_or_changed_led
     let provision = Command::new(tool).arg("provision").arg(&db).arg(&private).output().unwrap();
     assert!(provision.status.success(), "{}", String::from_utf8_lossy(&provision.stderr));
     assert!(!Command::new(tool).arg("provision").arg(&db).arg(&private).status().unwrap().success());
+    std::fs::write(folder.join("bank-authorities-phone.txt"), "+12125550199\n").unwrap();
     let mut bank = Atm::create(&db, &key).unwrap();
     auth::first_run_setup(&mut bank, "teller", "teller-password-1", "handler", "handler-password-1").unwrap();
     let admin = auth::login_admin(&mut bank, "teller", "teller-password-1").unwrap();
@@ -28,6 +29,30 @@ fn programmer_tool_decrypts_disk_records_and_bank_rejects_missing_or_changed_led
     customer::deposit(&mut bank, &session, &[(twenty, 5)]).unwrap();
     customer::withdraw(&mut bank, &session, Cents::from_dollars(20), atm::dispense::BillChoice::Any).unwrap();
     assert_eq!(customer::balance(&bank, &session).unwrap().as_i64(), 17_640);
+    auth::recovery::request_authorities_code(&mut bank, "+12125550199").unwrap();
+    let code = std::fs::read_to_string(folder.join("+12125550199.authorities-login.txt")).unwrap();
+    let authorities = auth::recovery::login_authorities(&mut bank, "+12125550199", code.trim()).unwrap();
+    assert_eq!(atm::revenue::balances(&bank, &authorities).unwrap()[0].balance.as_i64(), 360);
+    atm::revenue::adjust(
+        &mut bank,
+        &authorities,
+        atm::fx::Currency::Usd,
+        atm::revenue::Adjustment::Credit,
+        Cents::from_dollars(1),
+        "disk correction",
+    )
+    .unwrap();
+    atm::revenue::adjust(
+        &mut bank,
+        &authorities,
+        atm::fx::Currency::Usd,
+        atm::revenue::Adjustment::Debit,
+        Cents::new(50).unwrap(),
+        "disk correction reversal",
+    )
+    .unwrap();
+    assert_eq!(atm::revenue::balances(&bank, &authorities).unwrap()[0].balance.as_i64(), 410);
+    auth::logout_authorities(&mut bank, authorities).unwrap();
     admin::verify_integrity(&mut bank, &admin).unwrap();
     drop(bank);
 

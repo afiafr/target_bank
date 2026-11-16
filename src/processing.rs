@@ -196,6 +196,7 @@ pub(crate) fn charge(
             ),
         },
     )?;
+    crate::revenue::credit_fee(conn, fee_reference, currency, amount)?;
     conn.execute(
         "INSERT INTO processing.records(reference, ciphertext) VALUES (?1, ?2)",
         params![fee_reference, encrypted],
@@ -319,6 +320,13 @@ mod tests {
         let count: i64 =
             atm.conn.query_row("SELECT COUNT(*) FROM processing.records", [], |r| r.get(0)).unwrap();
         assert_eq!(count, 5);
+        assert_eq!(
+            atm.conn
+                .query_row("SELECT balance_cents FROM bank_revenue WHERE currency = 'USD'", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            450
+        );
         let encrypted: Vec<u8> = atm
             .conn
             .query_row("SELECT ciphertext FROM processing.records ORDER BY reference LIMIT 1", [], |r| {
@@ -380,6 +388,13 @@ mod tests {
         }
         assert!(customer::deposit(&mut atm, &session, &[(bill, 1)]).is_err());
         assert_eq!(customer::balance(&atm, &session).unwrap(), Cents::from_dollars(20));
+        assert_eq!(
+            atm.conn
+                .query_row("SELECT balance_cents FROM bank_revenue WHERE currency = 'USD'", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
         assert_eq!(cash::stock(&atm.conn).unwrap().1, Cents::from_dollars(2000));
         let after: i64 = atm.conn.query_row("SELECT COUNT(*) FROM audit_log", [], |r| r.get(0)).unwrap();
         assert_eq!(before, after);

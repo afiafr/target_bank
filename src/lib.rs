@@ -79,11 +79,13 @@ pub mod dispense;
 pub mod error;
 pub mod family;
 pub mod fx;
+pub mod identity;
 pub mod input;
 pub mod keys;
 pub mod money;
 pub mod processing;
 pub mod rate_feed;
+pub mod revenue;
 pub mod review;
 mod seal;
 pub mod service;
@@ -196,6 +198,8 @@ impl Atm {
         processing::install_if_available(&mut atm, db_path)?;
         auth::recovery::migrate_staff(&mut atm)?;
         auth::recovery::refresh_authorities_configuration(&mut atm)?;
+        revenue::migrate(&mut atm)?;
+        identity::initialize(&mut atm)?;
         Ok(atm)
     }
 
@@ -244,14 +248,17 @@ impl Atm {
         let conn = db::open_in_memory()?;
         let counter = seal::check(&conn)?;
         processing::attach(&conn, None)?;
-        Ok(Atm {
+        let mut atm = Atm {
             conn,
             id: new_id()?,
             anchor: None,
             seen: Cell::new(counter),
             anchor_behind: Cell::new(false),
             unknown_cards: HashMap::new(),
-        })
+        };
+        revenue::migrate(&mut atm)?;
+        identity::initialize(&mut atm)?;
+        Ok(atm)
     }
 
     /// Tests that set up a situation by editing the database directly (say,

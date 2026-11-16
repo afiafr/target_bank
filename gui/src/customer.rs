@@ -248,7 +248,7 @@ impl App {
                     Some(amount) if !amount.is_zero() => {
                         *slot = Some(amount);
                         let mut lines = vec![
-                            format!("Amount: {}", st.currency.format(amount)),
+                            format!("Transfer amount to confirm: {}", st.currency.format(amount)),
                             format!("To account: {} ({hint})", mask(to)),
                         ];
                         match atm::processing::transfer_summary(st.currency, amount) {
@@ -664,7 +664,10 @@ impl App {
             Ok((plan, charge)) => {
                 *slot = Some(choice);
                 // Bills, then cash + each fee = total, fee rules in small print.
-                let lines = vec![format!("Paid as {}", bills_text(&plan))];
+                let lines = vec![
+                    format!("Withdrawal amount to confirm: {amount}"),
+                    format!("Paid as {}", bills_text(&plan)),
+                ];
                 self.ask_confirm_sum(
                     "Withdraw this cash?",
                     lines,
@@ -690,7 +693,8 @@ impl App {
             total = total.checked_add(value).unwrap_or(total);
             lines.push(format!("{n} × ${} = {value}", d.dollars()));
         }
-        // Cash - any fee = total (and what the account receives, if converted).
+        lines.insert(0, format!("Deposit amount to confirm: {total}"));
+        // The customer confirms cash principal; the summary separately shows account impact.
         let preview = st.customer.as_ref().map(|s| customer::preview_deposit(&self.atm(), s, total));
         match preview {
             Some(Ok(credit)) => {

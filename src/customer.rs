@@ -1102,6 +1102,18 @@ mod tests {
         let r = withdraw(&mut conn, &jin, usd(20), BillChoice::Any).unwrap();
         assert_eq!(r.amount, Cents::from_dollars(36_856));
         assert_eq!(Currency::Krw.format(r.balance_after), "63,144 KRW");
+        assert_eq!(
+            conn.query_row("SELECT balance_cents FROM bank_revenue WHERE currency = 'KRW'", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            83_200
+        );
+        assert_eq!(
+            conn.query_row("SELECT balance_cents FROM bank_revenue WHERE currency = 'USD'", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
         // Half a won can't be opened with.
         assert!(
             admin::register_guest_card(

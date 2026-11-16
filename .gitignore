@@ -17,3 +17,6 @@
 
 # Programmer-only processing ledger decryption keys
 *.processing-fees.private.pem
+
+# Programmer-configured installation location
+/atm-location.txt

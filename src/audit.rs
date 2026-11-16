@@ -43,6 +43,8 @@ pub enum Action {
     Withdrawal,
     Transfer,
     ProcessingFee,
+    RevenueCredit,
+    RevenueDebit,
     LimitChanged,
     ControlsChanged,
     AccountFrozen,
@@ -87,6 +89,8 @@ impl Action {
             Action::Withdrawal => "withdrawal",
             Action::Transfer => "transfer",
             Action::ProcessingFee => "processing_fee",
+            Action::RevenueCredit => "revenue_credit",
+            Action::RevenueDebit => "revenue_debit",
             Action::LimitChanged => "limit_changed",
             Action::ControlsChanged => "controls_changed",
             Action::AccountFrozen => "account_frozen",
@@ -123,7 +127,7 @@ pub(crate) struct Entry<'a> {
     pub amount: Option<Cents>,
     /// US-dollar value of a deposit, withdrawal or transfer (counts toward daily limits).
     pub usd: Option<Cents>,
-    /// Program-generated text only. Never raw user input.
+    /// Program-formatted text; user reasons must be length-limited and exclude control characters.
     pub detail: &'a str,
 }
 
@@ -419,6 +423,7 @@ fn reconcile_state(conn: &Connection) -> Result<i64> {
     if !wrong.is_empty() {
         return Err(AtmError::StateMismatch(wrong));
     }
+    checked += crate::revenue::reconcile(conn)?;
     Ok(checked)
 }
 
@@ -467,8 +472,9 @@ pub(crate) fn for_account(
     // Fixed SQL; the filter switch is itself a bound parameter.
     let mut stmt = conn.prepare(
         "SELECT l.seq, l.ts, l.actor, l.action, a.account_lookup, a.account_enc,
-                c.account_lookup, c.account_enc, l.amount_cents, l.detail, COALESCE(a.currency, 'USD')
+                c.account_lookup, c.account_enc, l.amount_cents, l.detail, COALESCE(v.currency, a.currency, 'USD')
          FROM audit_log l
+         LEFT JOIN revenue_ledger v ON v.audit_seq = l.seq
          LEFT JOIN accounts a ON a.id = l.account_id
          LEFT JOIN accounts c ON c.id = l.counterparty_id
          WHERE (l.account_id = ?1 OR l.counterparty_id = ?1)
@@ -515,8 +521,9 @@ pub(crate) fn recent(conn: &Connection, page_size: u32, page: u32) -> Result<Vec
     let offset = i64::from(page) * i64::from(page_size);
     let mut stmt = conn.prepare(
         "SELECT l.seq, l.ts, l.actor, l.action, a.account_lookup, a.account_enc,
-                c.account_lookup, c.account_enc, l.amount_cents, l.detail, COALESCE(a.currency, 'USD')
+                c.account_lookup, c.account_enc, l.amount_cents, l.detail, COALESCE(v.currency, a.currency, 'USD')
          FROM audit_log l
+         LEFT JOIN revenue_ledger v ON v.audit_seq = l.seq
          LEFT JOIN accounts a ON a.id = l.account_id
          LEFT JOIN accounts c ON c.id = l.counterparty_id
          ORDER BY l.seq DESC LIMIT ?1 OFFSET ?2",
